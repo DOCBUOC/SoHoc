@@ -1,0 +1,28 @@
+{
+  "dependencies": {
+    "async": "^3.2.5",
+    "express": "^4.18.3",
+    "highcharts": "^11.4.0",
+    "js-year-calendar": "^2.0.0",
+    "jsdom": "^24.0.0",
+    "lodash": "^4.17.21",
+    "moment": "^2.30.1",
+    "mysql": "^2.18.1"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "name": "sosomienbac",
+  "description": "tra loi mot so cau hoi sau:\r - thu fromDate toi toDate, so lan xuat hien cua cac con so la bao nhieu (/frontend/thong_ke_so_lan_xuat_hien_from_to)\r - toi muon biet con so AA xuat hien bao nhieu lan moi thang (ve bieu do)  (/frontend/thong_ke_so_lan_xuat_hien_theo_thang_quy_nam)\r - toi muon biet trong mot thang, con so AA xuat hien nhung ngay nao (/frontend/thong_ke_so_lan_xuat_hien_theo_thang_quy_nam, truyen them formatted_number)",
+  "version": "1.0.0",
+  "main": "server.js",
+  "devDependencies": {
+    "grunt": "^1.6.1",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-contrib-cssmin": "^5.0.0",
+    "grunt-contrib-uglify": "^5.2.2"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
