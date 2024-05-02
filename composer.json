@@ -1,0 +1,11 @@
+{
+  "name": "SoSoMienBac",
+  "description": "Spectos Cloud frontend build",
+  "version": "0.0.1",
+  "devDependencies": {
+  },
+  "dependencies": {
+    "async": "0.9.2",
+    "jsdom": "^24.0.0"
+  }
+}

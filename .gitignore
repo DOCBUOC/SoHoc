@@ -1,0 +1,5 @@
+# CakePHP specific files #
+##########################
+/HIEU_DATA
+/node_modules/*
+.idea/*
