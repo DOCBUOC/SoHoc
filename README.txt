@@ -5,4 +5,6 @@ tra loi mot so cau hoi sau:
 
 
 - toi muon biet con so AA xuat hien, sau bao lau thi con so nay lai xuat hien, lap bieu do cho tat ca cac con so trong cung mot chart (trong
-mot khoang thoi gian)
+mot khoang thoi gian) (done)
+
+- trong vong 4 thang, xac xuat xuat hien con so AA la bao nhieu?

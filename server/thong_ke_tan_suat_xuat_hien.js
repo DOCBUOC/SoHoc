@@ -7,12 +7,13 @@ const BASE_URL = 'https://xosodaiphat.com/xsmb-';
 const DATE_DB = 'YYYY-MM-DD';
 const DATE_URL = 'DD-MM-YYYY';
 
-function thong_ke_so_lan_xuat_hien_from_to(req, res) {
-    let from = req.query.fromDate && moment(req.query.fromDate).isValid() ? moment(req.query.fromDate) : moment();
-    let to = req.query.toDate && moment(req.query.toDate).isValid() ? moment(req.query.toDate) : moment();
-    from = from.format(DATE_DB);
-    to = to.format(DATE_DB);
-    const sql = `SELECT increment_number AS raw_number,
+async function thong_ke_so_lan_xuat_hien_from_to(req, res, justData) {
+    try {
+        let from = req.query.fromDate && moment(req.query.fromDate).isValid() ? moment(req.query.fromDate) : moment();
+        let to = req.query.toDate && moment(req.query.toDate).isValid() ? moment(req.query.toDate) : moment();
+        from = from.format(DATE_DB);
+        to = to.format(DATE_DB);
+        const sql = `SELECT increment_number AS raw_number,
                         COALESCE(COUNT(DATA.formatted_number), 0) AS count
                  FROM
                      increment_number
@@ -23,12 +24,26 @@ function thong_ke_so_lan_xuat_hien_from_to(req, res) {
                  GROUP BY
                      formatted_number;`;
 
-    db.query(sql, function (err, result) {
-        if (err) {
-            return res.json({});
+        const result = await new Promise((resolve, reject) => {
+            db.query(sql, function (err, result) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
+        });
+        if (justData) {
+            return result;
         }
         return res.json(result);
-    });
+    } catch (error) {
+        console.error(error);
+        if (justData) {
+            return [];
+        }
+        return res.json({});
+    }
 }
 
 function thong_ke_so_lan_xuat_hien_theo_thang_quy_nam(req, res) {

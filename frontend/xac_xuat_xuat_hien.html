@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node.js on Browser</title>
+    <link rel="stylesheet" href="https://unpkg.com/js-year-calendar@latest/dist/js-year-calendar.min.css">
+    <script src="https://unpkg.com/js-year-calendar@latest/dist/js-year-calendar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js"></script>
+</head>
+<body>
+<form>
+    <input id="fromDate" type="text" placeholder="from">
+    <input id="period" type="text" placeholder="period">
+    <input id="khoang_cach" type="text" placeholder="khoang_cach">
+    <input type="button" id="submitBtn" value="Submit">
+</form>
+<div id="container"></div>
+<div id="calendar"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<script src="https://code.highcharts.com/modules/accessibility.js"></script>
+<script>
+    var _fromDate = $("#fromDate").val();
+    var _period = $("#period").val();
+    var khoang_cach = $("#khoang_cach").val();
+    $(document).ready(function () {
+        $("#submitBtn").click(function () {
+            drawCalendar();
+            _fromDate = $("#fromDate").val();
+            _period = $("#period").val();
+            khoang_cach = $("#khoang_cach").val();
+            var url = "/api/xac_xuat_xuat_hien?fromDate=" + _fromDate + "&period=" + _period + '&khoang_cach=' + khoang_cach;
+            $.ajax({
+                url: url,
+                method: 'GET',
+                success: function (data) {
+                    const queryString = window.location.search;
+                    const urlParams = new URLSearchParams(queryString);
+                    const disableAll = urlParams.get('disableAll');
+                    let _format = 'YYYY-MM-DD';
+                    let _category = [];
+                    const fromDate = moment(_fromDate);
+                    let chart = {
+                        title: {
+                            text: 'U.S Solar Employment Growth',
+                            align: 'left'
+                        },
+
+                        subtitle: {
+                            text: 'By Job Category. Source: <a href="https://irecusa.org/programs/solar-jobs-census/" target="_blank">IREC</a>.',
+                            align: 'left'
+                        },
+
+                        yAxis: {
+                            title: {
+                                text: 'Number of Employees'
+                            }
+                        },
+
+                        xAxis: {
+                            accessibility: {
+                                rangeDescription: 'Range: 2010 to 2020'
+                            },
+                            categories: _category
+                        },
+
+                        legend: {
+                            layout: 'vertical',
+                            align: 'right',
+                            verticalAlign: 'middle'
+                        },
+                        plotOptions: {
+                            series: {
+                                events: {
+                                    legendItemClick: function (event) {
+                                        var series = this;
+                                        var visible = series.visible;
+                                        if (disableAll == 'true') {
+                                            if (!visible) {
+                                                drawCalendar();
+                                            } else {
+                                                drawCalendar(event.target.name);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+
+                        series: data,
+
+                        responsive: {
+                            rules: [{
+                                condition: {
+                                    maxWidth: 2000
+                                },
+                                chartOptions: {
+                                    legend: {
+                                        layout: 'horizontal',
+                                        align: 'center',
+                                        verticalAlign: 'bottom'
+                                    }
+                                }
+                            }]
+                        }
+
+                    };
+                    if (disableAll) {
+                        chart.chart = {
+                            events: {
+                                load: function () {
+                                    var chart = this;
+                                    chart.series.forEach(function (series) {
+                                        // Ẩn tất cả các series khi biểu đồ được tải
+                                        series.setVisible(false, false);
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    Highcharts.chart('container', chart);
+                },
+                error: function (err) {
+                    console.error('Error:', err);
+                }
+            });
+        });
+    });
+
+    function drawCalendar(formatted_number) {
+        let tooltip = null;
+        const calendar = new Calendar('#calendar', {
+            style: 'background',
+            dataSource: function ({year}) {
+                if (!formatted_number) {
+                    return [];
+                }
+                // Load data from GitHub API
+                return fetch("/api/thong_ke_so_lan_xuat_hien_theo_thang_quy_nam?fromDate=" + _fromDate + "&period=" + _period + '&khoang_cach=' + khoang_cach + '&formatted_number=' + formatted_number)
+                    .then(result => result.json())
+                    .then(result => {
+                        return result.map((dateString, index, originArray) => ({
+                            startDate: new Date(dateString),
+                            endDate: new Date(dateString),
+                            color: 'red'
+                        }));
+                    });
+            },
+            mouseOnDay: function (e) {
+                if (e.events.length > 0) {
+                    var content = '';
+
+                    for (var i in e.events) {
+                        content += '<div class="event-tooltip-content">'
+                            + '<div class="event-name" style="color:' + e.events[i].color + '">' + e.events[i].name + '</div>'
+                            + '<div class="event-details">' + e.events[i].details + '</div>'
+                            + '</div>';
+                    }
+
+                    if (tooltip !== null) {
+                        tooltip.destroy();
+                        tooltip = null;
+                    }
+
+                    tooltip = tippy(e.element, {
+                        placement: 'right',
+                        content: content,
+                        animateFill: false,
+                        animation: 'shift-away',
+                        arrow: true
+                    });
+                    tooltip.show();
+                }
+            },
+            mouseOutDay: function () {
+                if (tooltip !== null) {
+                    tooltip.destroy();
+                    tooltip = null;
+                }
+            }
+        });
+
+    }
+
+</script>
+</body>
+</html>
