@@ -122,7 +122,7 @@ function getDataFromDate(startDate, endDate) {
     return Promise.all(promises);
 }
 
-getDataFromDate('2024-10-01', '2024-12-31')
+getDataFromDate('2024-11-01', '2024-12-31')
     .then(allData => {
         allData.forEach(({date, numbers}) => {
             saveDataToDatabase(date, numbers);
