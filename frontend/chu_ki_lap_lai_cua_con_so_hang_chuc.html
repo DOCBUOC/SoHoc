@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node.js on Browser</title>
+    <link rel="stylesheet" href="https://unpkg.com/js-year-calendar@latest/dist/js-year-calendar.min.css">
+    <script src="https://unpkg.com/js-year-calendar@latest/dist/js-year-calendar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js"></script>
+</head>
+<body>
+<form>
+    <input id="fromDate" type="text" placeholder="from">
+    <input id="toDate" type="text" placeholder="toDate">
+    <input type="button" id="submitBtn" value="Submit">
+</form>
+<div id="container"></div>
+<div id="calendar"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<script src="https://code.highcharts.com/modules/accessibility.js"></script>
+<script>
+    var _fromDate = $("#fromDate").val();
+    var _to = $("#toDate").val();
+    var khoang_cach = $("#khoang_cach").val();
+    $(document).ready(function () {
+        $("#submitBtn").click(function () {
+            drawCalendar();
+            _fromDate = $("#fromDate").val();
+            _to = $("#toDate").val();
+            khoang_cach = $("#khoang_cach").val();
+            var url = "/api/get_con_so_hang_chuc?fromDate=" + _fromDate + "&toDate=" + _to;
+            $.ajax({
+                url: url,
+                method: 'GET',
+                success: function (data) {
+                    const queryString = window.location.search;
+                    const urlParams = new URLSearchParams(queryString);
+                    const disableAll = urlParams.get('disableAll');
+                    let _format = 'YYYY-MM-DD';
+                    let _category = [];
+                    const fromDate = moment(_fromDate);
+                    let chart = {
+                        title: {
+                            text: 'U.S Solar Employment Growth',
+                            align: 'left'
+                        },
+
+                        subtitle: {
+                            text: 'By Job Category. Source: <a href="https://irecusa.org/programs/solar-jobs-census/" target="_blank">IREC</a>.',
+                            align: 'left'
+                        },
+
+                        yAxis: {
+                            title: {
+                                text: 'Number of Employees'
+                            }
+                        },
+
+                        xAxis: {
+                            accessibility: {
+                                rangeDescription: 'Range: 2010 to 2020'
+                            },
+                            categories: _category
+                        },
+
+                        legend: {
+                            layout: 'vertical',
+                            align: 'right',
+                            verticalAlign: 'middle'
+                        },
+                        plotOptions: {
+                            series: {
+                                events: {
+                                    legendItemClick: function (event) {
+                                        var series = this;
+                                        var visible = series.visible;
+                                        if (disableAll == 'true') {
+                                            if (!visible) {
+                                                drawCalendar();
+                                            } else {
+                                                drawCalendar(event.target.name);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+
+                        series: data,
+
+                        responsive: {
+                            rules: [{
+                                condition: {
+                                    maxWidth: 2000
+                                },
+                                chartOptions: {
+                                    legend: {
+                                        layout: 'horizontal',
+                                        align: 'center',
+                                        verticalAlign: 'bottom'
+                                    }
+                                }
+                            }]
+                        }
+
+                    };
+                    if (disableAll) {
+                        chart.chart = {
+                            events: {
+                                load: function () {
+                                    var chart = this;
+                                    chart.series.forEach(function (series) {
+                                        // Ẩn tất cả các series khi biểu đồ được tải
+                                        series.setVisible(false, false);
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    Highcharts.chart('container', chart);
+                },
+                error: function (err) {
+                    console.error('Error:', err);
+                }
+            });
+        });
+    });
+
+    function drawCalendar(hangChuc) {
+        let tooltip = null;
+        const calendar = new Calendar('#calendar', {
+            style: 'background',
+            dataSource: function ({year}) {
+                if (!hangChuc) {
+                    return [];
+                }
+                // Load data from GitHub API
+                return fetch("/api/chu_ki_lap_lai_cua_con_so_hang_chuc?fromDate=" + _fromDate + "&toDate=" + _to + "&hangChuc=" + hangChuc)
+                    .then(result => result.json())
+                    .then(result => {
+                        result = result.filter(function (row) {
+                            return row.hang_chuc == hangChuc;
+                        });
+                        return result.map((row, index, originArray) => ({
+                            startDate: new Date(row.day),
+                            endDate: new Date(row.day),
+                            color: 'red'
+                        }));
+                    });
+            },
+            mouseOnDay: function (e) {
+                if (e.events.length > 0) {
+                    var content = '';
+
+                    for (var i in e.events) {
+                        content += '<div class="event-tooltip-content">'
+                            + '<div class="event-name" style="color:' + e.events[i].color + '">' + e.events[i].name + '</div>'
+                            + '<div class="event-details">' + e.events[i].details + '</div>'
+                            + '</div>';
+                    }
+
+                    if (tooltip !== null) {
+                        tooltip.destroy();
+                        tooltip = null;
+                    }
+
+                    tooltip = tippy(e.element, {
+                        placement: 'right',
+                        content: content,
+                        animateFill: false,
+                        animation: 'shift-away',
+                        arrow: true
+                    });
+                    tooltip.show();
+                }
+            },
+            mouseOutDay: function () {
+                if (tooltip !== null) {
+                    tooltip.destroy();
+                    tooltip = null;
+                }
+            }
+        });
+
+    }
+
+</script>
+</body>
+</html>
