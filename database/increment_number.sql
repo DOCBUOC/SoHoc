@@ -26,7 +26,7 @@ SET time_zone = "+00:00";
 --
 -- Table structure for table `increment_number`
 --
-
+DROP TABLE IF EXISTS `increment_number`;
 CREATE TABLE `increment_number` (
   `increment_number` varchar(4) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
