@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-frontend-hieu
+    restart: always
+
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: frontend_hieu
+      MYSQL_USER: BaoQuanHan
+      MYSQL_PASSWORD: Baoquan12345
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+    command: --default-authentication-plugin=mysql_native_password
+
+volumes:
+  mysql_data:
