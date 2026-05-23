@@ -45,19 +45,19 @@ function generateUrl(date) {
 
 async function extractNumbersFromURL(url, retryCount = 3) {
     try {
+        console.log('url: ',url)
         const response = await fetch(url);
         const html = await response.text();
         const dom = new JSDOM(html);
         const doc = dom.window.document;
 
-        let cells = doc.querySelectorAll('.table-xsmb tbody tr:nth-child(n+2) td:nth-child(2)');
+        let spans = doc.querySelectorAll(
+            '.table-xsmb .special-prize-lg, .table-xsmb .number-black-bold, .table-xsmb .special-prize-sm'
+        );
         let data = [];
 
-        cells.forEach(function (cell) {
-            let spans = cell.querySelectorAll('span');
-            spans.forEach(function (span) {
-                data.push(span.textContent.trim());
-            });
+        spans.forEach(function (span) {
+            data.push(span.textContent.trim());
         });
         if(retryCount < 3){
             console.log(url);
@@ -122,7 +122,7 @@ function getDataFromDate(startDate, endDate) {
     return Promise.all(promises);
 }
 
-getDataFromDate('2025-01-01', '2025-12-31')
+getDataFromDate('2020-01-01', '2026-05-20')
     .then(allData => {
         allData.forEach(({date, numbers}) => {
             saveDataToDatabase(date, numbers);

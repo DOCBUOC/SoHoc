@@ -14,11 +14,11 @@ async function thong_ke_so_lan_xuat_hien_from_to(req, res, justData) {
         from = from.format(DATE_DB);
         to = to.format(DATE_DB);
         const sql = `SELECT increment_number AS raw_number,
-                        COALESCE(COUNT(DATA.formatted_number), 0) AS count
+                        COALESCE(COUNT(data.formatted_number), 0) AS count
                  FROM
                      increment_number
-                     LEFT JOIN DATA
-                 ON increment_number = DATA.formatted_number
+                     LEFT JOIN data
+                 ON increment_number = data.formatted_number
                  WHERE day >= '${from}'
                    AND day <= '${to}'
                  GROUP BY
@@ -58,8 +58,8 @@ function thong_ke_so_lan_xuat_hien_theo_thang_quy_nam(req, res) {
                         day
                  FROM
                      increment_number
-                     LEFT JOIN DATA
-                 ON increment_number = DATA.formatted_number
+                     LEFT JOIN data
+                 ON increment_number = data.formatted_number
                  WHERE
                      day >= '${from}'
                    AND day <= '${to}'
@@ -81,11 +81,11 @@ function thong_ke_so_lan_xuat_hien_theo_thang_quy_nam(req, res) {
         const sql = `SELECT increment_number AS raw_number,
                         ${type},
                         year,
-                        COALESCE(COUNT(DATA.formatted_number), 0) AS count
+                        COALESCE(COUNT(data.formatted_number), 0) AS count
                  FROM
                      increment_number
-                     LEFT JOIN DATA
-                 ON increment_number = DATA.formatted_number
+                     LEFT JOIN data
+                 ON increment_number = data.formatted_number
                  WHERE
                      day >= '${from}'
                    AND day <= '${to}'

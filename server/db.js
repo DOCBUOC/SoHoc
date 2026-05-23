@@ -3,7 +3,8 @@ var con = mysql.createConnection({
     host: "localhost",
     user: "BaoQuanHan",
     password: "Baoquan12345",
-    database: "frontend_hieu"
+    database: "frontend_hieu",
+    charset: "UTF8MB4_GENERAL_CI",
 });
 
 con.connect(function (err) {

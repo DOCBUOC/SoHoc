@@ -28,8 +28,8 @@ SET time_zone = "+00:00";
 --
 DROP TABLE IF EXISTS `increment_number`;
 CREATE TABLE `increment_number` (
-  `increment_number` varchar(4) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `increment_number` varchar(4) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `increment_number`
