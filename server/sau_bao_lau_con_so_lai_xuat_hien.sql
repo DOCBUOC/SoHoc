@@ -5,7 +5,7 @@ SELECT
         ) AS gap_days
 FROM (
          SELECT day AS next_appearance
-         FROM DATA
+         FROM data
          WHERE formatted_number = '02' and day >='2024-01-01' and day <= '2024-03-31'
          ORDER BY day
      ) AS appearances;
