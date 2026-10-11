@@ -1,109 +1,83 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Node.js on Browser</title>
-
+    <title>Thống kê số lần xuất hiện từ ngày đến ngày</title>
 </head>
 <body>
-<form>
-    <input id="fromDate" type="text" placeholder="from">
-    <input id="toDate" type="text" placeholder="to">
+<form onsubmit="return false;">
+    <label>Từ ngày <input id="fromDate" type="date"></label>
+    <label>Đến ngày <input id="toDate" type="date"></label>
+    <label>Con số (00-99, tuỳ chọn) <input id="number" type="text" maxlength="2" size="3" placeholder="vd: 10"></label>
     <input type="button" id="submitBtn" value="Submit">
 </form>
+<p id="summary"></p>
 <div id="container"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://code.highcharts.com/highcharts.js"></script>
 <script src="https://code.highcharts.com/modules/exporting.js"></script>
 <script src="https://code.highcharts.com/modules/accessibility.js"></script>
 <script>
+    const DATE_FORMAT = 'YYYY-MM-DD';
+    const NUMBERS = Array.from({length: 100}, (_, i) => String(i).padStart(2, '0'));
+
     $(document).ready(function () {
-        $("#submitBtn").click(function () {
-            var fromDate = $("#fromDate").val();
-            var toDate = $("#toDate").val();
-            var url = "/api/thong_ke_so_lan_xuat_hien_from_to?fromDate=" + fromDate + "&toDate=" + toDate;
-            $.ajax({
-                url: url,
-                method: 'GET',
-                success: function (response) {
-                    const X_AXIS = [];
-                    const Y_AXIS = [];
-                    response.forEach(function (row) {
-                        X_AXIS.push(row.raw_number);
-                        Y_AXIS.push(row.count);
-                    });
-                    Highcharts.chart('container', {
-                        chart: {
-                            type: 'bar',
-                            zoomType: 'y',
-                            height: 2000
-                        },
-                        title: {
-                            text: 'Top 10 EU countries in organic farming area (2018)'
-                        },
-                        subtitle: {
-                            text:
-                                'Source: <a href="https://ec.europa.eu/eurostat/statistics-explained/index.php/Organic_farming_statistics">Eurostat</a>'
-                        },
-                        xAxis: {
-                            categories: X_AXIS,
-                            labels: {
-                                step: 1
-                            },
-                            title: {
-                                text: null
-                            },
-                            accessibility: {
-                                description: 'Countries'
-                            }
-                        },
-                        yAxis: {
-                            title: {
-                                text: null
-                            },
-                            accessibility: {
-                                description: 'Organic farming area',
-                                rangeDescription: 'Range: 0 to 30%.'
-                            },
-                            labels: {
-                                overflow: 'justify',
-                                format: '{value} lan'
-                            }
-                        },
-                        plotOptions: {
-                            bar: {
-                                dataLabels: {
-                                    enabled: true,
-                                    format: '{y} lan'
-                                }
-                            }
-                        },
-                        tooltip: {
-                            valueSuffix: 'lan',
-                            stickOnContact: true,
-                            backgroundColor: 'rgba(255, 255, 255, 0.93)'
-                        },
-                        legend: {
-                            enabled: false
-                        },
-                        series: [
-                            {
-                                name: 'Organic farming area',
-                                color: '#a5d6a7',
-                                borderColor: '#60A465',
-                                data: Y_AXIS
-                            }
-                        ]
-                    });
-                },
-                error: function (err) {
-                    console.error('Error:', err);
-                }
-            });
-        });
+        // Mặc định: 30 ngày gần nhất
+        $('#fromDate').val(moment().subtract(29, 'days').format(DATE_FORMAT));
+        $('#toDate').val(moment().format(DATE_FORMAT));
+        $('#submitBtn').click(loadChart);
+        loadChart();
     });
+
+    function loadChart() {
+        const fromDate = $('#fromDate').val();
+        const toDate = $('#toDate').val();
+        const raw = $('#number').val().trim();
+        const number = raw ? raw.padStart(2, '0') : ''; // "5" -> "05"
+        if (!fromDate || !toDate || moment(fromDate).isAfter(moment(toDate))) {
+            alert('Vui lòng chọn khoảng thời gian hợp lệ (từ ngày <= đến ngày).');
+            return;
+        }
+        if (number && NUMBERS.indexOf(number) === -1) {
+            alert('Con số phải nằm trong khoảng 00-99.');
+            return;
+        }
+        $.ajax({
+            url: '/api/thong_ke_so_lan_xuat_hien_from_to?fromDate=' + fromDate + '&toDate=' + toDate,
+            method: 'GET',
+            success: function (response) {
+                // API không trả con số nào có 0 lần và không sắp xếp -> điền đủ 00-99
+                const counts = {};
+                response.forEach(row => counts[row.raw_number] = row.count);
+                const data = NUMBERS.map(n => ({
+                    name: n,
+                    y: counts[n] || 0,
+                    color: n === number ? '#d32f2f' : '#a5d6a7'
+                }));
+                const total = data.reduce((sum, p) => sum + p.y, 0);
+                $('#summary').text(number
+                    ? 'Con số ' + number + ' xuất hiện ' + (counts[number] || 0) + ' lần từ ' + fromDate + ' đến ' + toDate
+                    : 'Tổng ' + total + ' lượt từ ' + fromDate + ' đến ' + toDate);
+                Highcharts.chart('container', {
+                    chart: {type: 'column', zoomType: 'x'},
+                    title: {text: 'Số lần xuất hiện của từng con số', align: 'left'},
+                    subtitle: {text: fromDate + ' → ' + toDate, align: 'left'},
+                    xAxis: {type: 'category', labels: {step: 1}, title: {text: 'Con số'}},
+                    yAxis: {title: {text: 'Số lần xuất hiện'}, allowDecimals: false},
+                    plotOptions: {column: {dataLabels: {enabled: true}}},
+                    tooltip: {pointFormat: 'Số lần: <b>{point.y}</b>'},
+                    legend: {enabled: false},
+                    series: [{name: 'Số lần xuất hiện', data: data}]
+                });
+            },
+            error: function (err) {
+                console.error('Error:', err);
+            }
+        });
+    }
 </script>
 </body>
 </html>
