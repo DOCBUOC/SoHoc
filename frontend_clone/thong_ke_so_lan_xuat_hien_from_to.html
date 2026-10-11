@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node.js on Browser</title>
+
+</head>
+<body>
+<form>
+    <input id="fromDate" type="text" placeholder="from">
+    <input id="toDate" type="text" placeholder="to">
+    <input type="button" id="submitBtn" value="Submit">
+</form>
+<div id="container"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<script src="https://code.highcharts.com/modules/accessibility.js"></script>
+<script>
+    $(document).ready(function () {
+        $("#submitBtn").click(function () {
+            var fromDate = $("#fromDate").val();
+            var toDate = $("#toDate").val();
+            var url = "/api/thong_ke_so_lan_xuat_hien_from_to?fromDate=" + fromDate + "&toDate=" + toDate;
+            $.ajax({
+                url: url,
+                method: 'GET',
+                success: function (response) {
+                    const X_AXIS = [];
+                    const Y_AXIS = [];
+                    response.forEach(function (row) {
+                        X_AXIS.push(row.raw_number);
+                        Y_AXIS.push(row.count);
+                    });
+                    Highcharts.chart('container', {
+                        chart: {
+                            type: 'bar',
+                            zoomType: 'y',
+                            height: 2000
+                        },
+                        title: {
+                            text: 'Top 10 EU countries in organic farming area (2018)'
+                        },
+                        subtitle: {
+                            text:
+                                'Source: <a href="https://ec.europa.eu/eurostat/statistics-explained/index.php/Organic_farming_statistics">Eurostat</a>'
+                        },
+                        xAxis: {
+                            categories: X_AXIS,
+                            labels: {
+                                step: 1
+                            },
+                            title: {
+                                text: null
+                            },
+                            accessibility: {
+                                description: 'Countries'
+                            }
+                        },
+                        yAxis: {
+                            title: {
+                                text: null
+                            },
+                            accessibility: {
+                                description: 'Organic farming area',
+                                rangeDescription: 'Range: 0 to 30%.'
+                            },
+                            labels: {
+                                overflow: 'justify',
+                                format: '{value} lan'
+                            }
+                        },
+                        plotOptions: {
+                            bar: {
+                                dataLabels: {
+                                    enabled: true,
+                                    format: '{y} lan'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            valueSuffix: 'lan',
+                            stickOnContact: true,
+                            backgroundColor: 'rgba(255, 255, 255, 0.93)'
+                        },
+                        legend: {
+                            enabled: false
+                        },
+                        series: [
+                            {
+                                name: 'Organic farming area',
+                                color: '#a5d6a7',
+                                borderColor: '#60A465',
+                                data: Y_AXIS
+                            }
+                        ]
+                    });
+                },
+                error: function (err) {
+                    console.error('Error:', err);
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>

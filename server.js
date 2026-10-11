@@ -4,6 +4,7 @@ const db = require('./server/db');
 const {thong_ke_so_lan_xuat_hien_from_to, thong_ke_so_lan_xuat_hien_theo_thang_quy_nam} = require('./server/thong_ke_tan_suat_xuat_hien');
 const {xac_xuat_xuat_hien} = require('./server/xac_xuat_xuat_hien');
 const {chu_ky_lap_lai_cua_xien} = require('./server/chu_ky_lap_lai_cua_xien');
+const {khoang_cach_so_nam_giua} = require('./server/khoang_cach_so_nam_giua');
 const {chu_ki_lap_lai_cua_con_so_hang_chuc, get_con_so_hang_chuc} = require('./server/chu_ki_lap_lai_cua_con_so_hang_chuc');
 
 app.get('/frontend/thong_ke_so_lan_xuat_hien_from_to', (req, res) => {
@@ -48,6 +49,15 @@ app.get('/frontend/chu_ky_lap_lai_cua_xien', (req, res) => {
 
 app.get('/api/chu_ky_lap_lai_cua_xien', (req, res) => {
     chu_ky_lap_lai_cua_xien(req, res);
+});
+
+
+app.get('/frontend/khoang_cach_so_nam_giua', (req, res) => {
+    res.sendFile(__dirname + '/frontend/khoang_cach_so_nam_giua.html');
+});
+
+app.get('/api/khoang_cach_so_nam_giua', (req, res) => {
+    khoang_cach_so_nam_giua(req, res);
 });
 
 

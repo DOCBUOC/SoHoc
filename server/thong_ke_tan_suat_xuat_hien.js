@@ -93,22 +93,43 @@ function thong_ke_so_lan_xuat_hien_theo_thang_quy_nam(req, res) {
                      formatted_number,
                      ${type},
                      year
-                 ORDER BY increment_number ASC, day ASC;`;
+                 ORDER BY increment_number ASC, year ASC, ${type} ASC;`;
         db.query(sql, function (err, result) {
             if (err) {
                 return res.json([]);
             }
+            // Điền 0 cho kỳ không có dòng nào, để mọi series thẳng hàng với trục thời gian
+            const periodKey = {
+                month: (y, n) => y * 100 + n,
+                quarter: (y, n) => y * 10 + n,
+                year: (y) => y
+            }[type];
+            const periodNumber = (m) => type === 'quarter' ? m.quarter() : m.month() + 1;
+            let periods = [];
+            if (periodKey) {
+                const cursor = moment(from).startOf(type);
+                while (!cursor.isAfter(moment(to))) {
+                    periods.push(periodKey(cursor.year(), periodNumber(cursor)));
+                    cursor.add(1, type);
+                }
+            }
             let data = {};
             _.forEach(result, function (row) {
-                if (_.isEmpty(data[row.raw_number])) {
-                    data[row.raw_number] = {};
+                if (!data[row.raw_number]) {
+                    data[row.raw_number] = {name: row.raw_number, counts: {}, data: []};
                 }
-                if (_.isEmpty(data[row.raw_number]['data'])) {
-                    data[row.raw_number]['data'] = [];
+                if (periodKey) {
+                    data[row.raw_number].counts[periodKey(row.year, row[type])] = row.count;
+                } else {
+                    data[row.raw_number].data.push(row.count);
                 }
-                data[row.raw_number]['name'] = row.raw_number;
-                data[row.raw_number]['data'].push(row.count);
             });
+            if (periodKey) {
+                _.forEach(data, function (item) {
+                    item.data = periods.map(k => item.counts[k] || 0);
+                    delete item.counts;
+                });
+            }
             return res.json(_.values(data));
         });
     }

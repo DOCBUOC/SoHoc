@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khoảng cách của số nằm giữa hai số</title>
+    <style>
+        table { border-collapse: collapse; margin-top: 12px; }
+        th, td { border: 1px solid #ccc; padding: 4px 10px; text-align: right; }
+        th { background: #f0f0f0; cursor: pointer; user-select: none; }
+        td.l, th.l { text-align: left; }
+        tr.top td { background: #ffe0e0; font-weight: bold; }
+        .waiting { color: #b26a00; }
+        tbody tr, tr.top { cursor: pointer; }
+        tr.selected td { outline: 2px solid #1976d2; }
+    </style>
+</head>
+<body>
+<form onsubmit="return false;">
+    <label>Từ ngày <input id="fromDate" type="date"></label>
+    <label>Đến ngày <input id="toDate" type="date"></label>
+    <input type="button" id="submitBtn" value="Submit">
+</form>
+<p id="summary"></p>
+<p><small>Bộ ba (a, a+1, a+2): khi a và a+2 cùng ra một ngày, X là số ngày cho tới khi a+1 về (cùng ngày = 0).
+    Nếu cặp lặp lại trước khi a+1 về thì X vẫn đo từ lần cặp đầu tiên. Bấm tiêu đề cột để sắp xếp.</small></p>
+<div id="detailTitle"></div>
+<div id="chart"></div>
+<div id="chartGap"></div>
+<div id="result"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<script>
+    const DATE_FORMAT = 'YYYY-MM-DD';
+    const COLUMNS = [
+        {key: 'bo', label: 'Bộ ba', cls: 'l', get: r => r.a + ' - ' + r.mid + ' - ' + r.c, sort: r => r.a},
+        {key: 'soLanCap', label: 'Số lần cặp ra', get: r => r.soLanCap},
+        {key: 'soLanGiai', label: 'Số lần số giữa về', get: r => r.soLanGiai},
+        {key: 'maxX', label: 'X lớn nhất (ngày)', get: r => r.maxX === null ? '' : r.maxX, sort: r => r.maxX === null ? -1 : r.maxX},
+        {key: 'tuNgay', label: 'Cặp ra ngày', cls: 'l', get: r => r.tuNgay || ''},
+        {key: 'denNgay', label: 'Số giữa về ngày', cls: 'l', get: r => r.denNgay || ''},
+        {key: 'dangCho', label: 'Đang chờ (ngày)', cls: 'waiting', get: r => r.dangCho === null ? '' : r.dangCho + ' (từ ' + r.dangChoTuNgay + ')', sort: r => r.dangCho === null ? -1 : r.dangCho}
+    ];
+    let rows = [];
+    let sortKey = 'maxX', sortDir = -1;
+    let selected = new URLSearchParams(window.location.search).get('a'); // vd ?a=25 -> bộ ba 25-26-27
+
+    $(document).ready(function () {
+        // Mặc định: 12 tháng gần nhất
+        $('#fromDate').val(moment().subtract(12, 'months').format(DATE_FORMAT));
+        $('#toDate').val(moment().format(DATE_FORMAT));
+        $('#submitBtn').click(load);
+        load();
+    });
+
+    function load() {
+        const fromDate = $('#fromDate').val();
+        const toDate = $('#toDate').val();
+        if (!fromDate || !toDate || moment(fromDate).isAfter(moment(toDate))) {
+            alert('Vui lòng chọn khoảng thời gian hợp lệ (từ ngày <= đến ngày).');
+            return;
+        }
+        $.ajax({
+            url: '/api/khoang_cach_so_nam_giua?fromDate=' + fromDate + '&toDate=' + toDate,
+            method: 'GET',
+            success: function (response) {
+                rows = response.rows;
+                if (rows.length && !rows[0].events) {
+                    $('#summary').text('API trả dữ liệu cũ (thiếu "events"): hãy khởi động lại server (npm start) rồi tải lại trang.');
+                    return;
+                }
+                const m = response.max;
+                $('#summary').text(m
+                    ? 'Trong ' + response.fromDate + ' → ' + response.toDate + ' (' + response.soNgayCoDuLieu + ' ngày có dữ liệu): '
+                    + 'X lớn nhất = ' + m.maxX + ' ngày, bộ ba ' + m.a + ' - ' + m.mid + ' - ' + m.c
+                    + ' (cặp ra ' + m.tuNgay + ', ' + m.mid + ' về ' + m.denNgay + ')'
+                    : 'Không có bộ ba nào được giải trong khoảng này.');
+                if (!rows.some(r => r.a === selected)) {
+                    selected = m ? m.a : null; // mặc định: bộ ba có X lớn nhất
+                }
+                render();
+            },
+            error: function (err) {
+                console.error('Error:', err);
+                $('#summary').text('Lỗi khi tải dữ liệu.');
+            }
+        });
+    }
+
+    function render() {
+        const col = COLUMNS.find(c => c.key === sortKey);
+        const val = col.sort || col.get;
+        const sorted = rows.slice().sort((x, y) => {
+            const a = val(x), b = val(y);
+            return (a < b ? -1 : a > b ? 1 : 0) * sortDir;
+        });
+        const $table = $('<table>');
+        const $head = $('<tr>');
+        COLUMNS.forEach(function (c) {
+            $('<th>').addClass(c.cls || '').text(c.label + (c.key === sortKey ? (sortDir < 0 ? ' ▼' : ' ▲') : ''))
+                .click(function () {
+                    sortDir = sortKey === c.key ? -sortDir : -1;
+                    sortKey = c.key;
+                    render();
+                }).appendTo($head);
+        });
+        $table.append($head);
+        sorted.forEach(function (r) {
+            const $tr = $('<tr>');
+            if (r === rows[0] && r.maxX !== null) {
+                $tr.addClass('top'); // dòng X lớn nhất (API đã sắp xếp maxX giảm dần)
+            }
+            if (r.a === selected) {
+                $tr.addClass('selected');
+            }
+            $tr.click(function () {
+                selected = r.a;
+                render();
+            });
+            COLUMNS.forEach(c => $('<td>').addClass(c.cls || '').text(c.get(r)).appendTo($tr));
+            $table.append($tr);
+        });
+        $('#result').empty().append($table);
+        drawDetail(rows.find(r => r.a === selected));
+    }
+
+    // Biểu đồ: mỗi cột là một lần, trục x = ngày cặp ra lần đầu, cao = X (số ngày chờ số giữa)
+    function drawDetail(r) {
+        if (!r) {
+            $('#detailTitle').empty();
+            $('#chart').empty();
+            $('#chartGap').empty();
+            return;
+        }
+        const name = r.a + ' - ' + r.mid + ' - ' + r.c;
+        const points = r.events.map(e => ({
+            name: e.tuNgay, y: e.x, denNgay: e.denNgay, capNgay: e.capNgay.join(', ')
+        }));
+        if (r.dangCho !== null) {
+            points.push({name: r.dangChoTuNgay, y: r.dangCho, color: '#ffb74d', denNgay: 'chưa về', capNgay: r.dangChoCapNgay.join(', ')});
+        }
+        const values = r.events.map(e => e.x);
+        const avg = values.length ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1) : '-';
+        $('#detailTitle').html('<h3>' + name + ': cặp ra ' + r.soLanCap + ' lần, ' + r.mid + ' về ' + r.soLanGiai
+            + ' lần; X trung bình ' + avg + ' ngày, lớn nhất ' + (r.maxX === null ? '-' : r.maxX) + ' ngày'
+            + (r.dangCho !== null ? '; đang chờ ' + r.dangCho + ' ngày (cột cam)' : '') + '</h3>');
+        Highcharts.chart('chart', {
+            chart: {type: 'column'},
+            title: {text: null},
+            xAxis: {type: 'category', title: {text: 'Ngày cặp ' + r.a + ' & ' + r.c + ' ra lần đầu'}},
+            yAxis: {title: {text: 'X (ngày chờ ' + r.mid + ' về)'}, allowDecimals: false, min: 0},
+            legend: {enabled: false},
+            plotOptions: {column: {dataLabels: {enabled: true}}},
+            tooltip: {
+                pointFormat: 'X: <b>{point.y}</b> ngày<br>' + r.mid + ' về: <b>{point.denNgay}</b><br>Cặp ra các ngày: {point.capNgay}'
+            },
+            series: [{name: 'X', color: '#64b5f6', data: points}]
+        });
+        drawGaps(r);
+    }
+
+    // Biểu đồ riêng: số ngày giữa hai lần số giữa về liên tiếp (chỉ tính những lần về sau khi có cặp)
+    function drawGaps(r) {
+        const gaps = [];
+        for (let i = 1; i < r.events.length; i++) {
+            gaps.push({
+                name: r.events[i - 1].denNgay + ' → ' + r.events[i].denNgay,
+                y: moment(r.events[i].denNgay, DATE_FORMAT).diff(moment(r.events[i - 1].denNgay, DATE_FORMAT), 'days')
+            });
+        }
+        if (!gaps.length) {
+            $('#chartGap').html('<p>Cần ít nhất 2 lần ' + r.mid + ' về để có khoảng cách giữa các lần.</p>');
+            return;
+        }
+        const avg = (gaps.reduce((s, g) => s + g.y, 0) / gaps.length).toFixed(1);
+        Highcharts.chart('chartGap', {
+            chart: {type: 'column'},
+            title: {text: 'Khoảng cách giữa các lần ' + r.mid + ' về (bộ ba ' + r.a + ' - ' + r.mid + ' - ' + r.c + ')', align: 'left'},
+            subtitle: {text: gaps.length + ' khoảng, trung bình ' + avg + ' ngày, lớn nhất ' + Math.max.apply(null, gaps.map(g => g.y)) + ' ngày', align: 'left'},
+            xAxis: {type: 'category', labels: {rotation: -45}},
+            yAxis: {title: {text: 'Số ngày giữa hai lần về'}, allowDecimals: false, min: 0},
+            legend: {enabled: false},
+            plotOptions: {column: {dataLabels: {enabled: true}}},
+            tooltip: {pointFormat: 'Cách nhau: <b>{point.y}</b> ngày'},
+            series: [{name: 'Số ngày', color: '#81c784', data: gaps}]
+        });
+    }
+</script>
+</body>
+</html>
